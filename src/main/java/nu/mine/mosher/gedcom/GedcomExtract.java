@@ -1,77 +1,62 @@
 package nu.mine.mosher.gedcom;
 
+import joptsimple.OptionParser;
 import nu.mine.mosher.collection.TreeNode;
 import nu.mine.mosher.gedcom.exception.InvalidLevel;
 
 import java.io.*;
-import java.nio.charset.Charset;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.logging.Logger;
+
+import static nu.mine.mosher.logging.Jul.log;
 
 /**
  * Created by Christopher Alan Mosher on 2017-08-10
  */
-public class GedcomExtract {
-    private static final Logger log = Logger.getLogger("");
-
-    private final File fileGedcom;
-    private final File fileIds;
-    private final File fileSkeletonIds;
+public class GedcomExtract implements Gedcom.Processor {
+    private final GedcomExtractOptions options;
 
     private final Set<String> extracts = new HashSet<>();
     private final Set<String> skeletons = new HashSet<>();
 
-    private GedcomTree gt;
-
-    private GedcomExtract(final String filenameGedcom, final String filenameIds, final String filenameSkeletonIds) {
-        this.fileGedcom = new File(filenameGedcom);
-        this.fileIds = new File(filenameIds);
-        this.fileSkeletonIds = filenameSkeletonIds == null ? null : new File(filenameSkeletonIds);
-    }
-
     public static void main(final String... args) throws InvalidLevel, IOException {
-        if (args.length < 2 || 3 < args.length) {
-            throw new IllegalArgumentException("usage: java -jar gedcom-extract.jar in.ged in.ids [skel.ids]");
-        } else {
-            new GedcomExtract(args[0], args[1], args.length > 2 ? args[2] : null).main();
+        final GedcomExtractOptions options = new GedcomExtractOptions(new OptionParser());
+        options.parse(args);
+        new Gedcom(options, new GedcomExtract(options)).main();
+    }
+
+    private GedcomExtract(final GedcomExtractOptions options) {
+        this.options = options;
+    }
+
+    @Override
+    public boolean process(final GedcomTree tree) {
+        try {
+            readSet(this.options.fileIndis(), this.extracts);
+            readSet(this.options.fileSkeletons(), this.skeletons);
+
+            extract(tree);
+        } catch (final Throwable e) {
+            throw new IllegalStateException(e);
         }
+
+        return false;
     }
 
-    private void main() throws IOException, InvalidLevel {
-        readValues(this.fileIds, this.extracts);
-        readValues(this.fileSkeletonIds, this.skeletons);
-
-        loadGedcom();
-
-        extract();
-
-        System.err.flush();
-        System.out.flush();
-    }
-
-    private void loadGedcom() throws IOException, InvalidLevel {
-        final Charset charset = Gedcom.getCharset(this.fileGedcom);
-        this.gt = Gedcom.parseFile(fileGedcom, charset, false);
-    }
-
-    private static void readValues(final File file, final Set<String> set) throws IOException {
+    private static void readSet(final File file, final Set<String> set) throws IOException {
         if (file == null) {
             return;
         }
         final BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"));
-        int c = 0;
         for (String s = in.readLine(); s != null; s = in.readLine()) {
             set.add(s);
-            ++c;
         }
         in.close();
-        log.info("read "+Integer.toString(c)+" lines from "+file.getName());
     }
 
-    private void extract() {
-        for (final TreeNode<GedcomLine> rec : this.gt.getRoot()) {
+    private void extract(final GedcomTree tree) {
+        for (final TreeNode<GedcomLine> rec : tree.getRoot()) {
             final GedcomLine recLn = rec.getObject();
             final String id = recLn.getID();
             final GedcomTag tag = recLn.getTag();
@@ -115,20 +100,21 @@ public class GedcomExtract {
                         }
                     }
                 } else if (tag.equals(GedcomTag.FAMC) || tag.equals(GedcomTag.FAMS)) {
-                    if (ln.isPointer() && (this.extracts.contains(ln.getPointer()) || this.skeletons.contains(ln.getPointer()))) {
+                    if (ln.isPointer() && (this.extracts.contains(ln.getPointer()) || this.skeletons
+                        .contains(ln.getPointer()))) {
                         System.out.println(c);
                     }
                 }
             }
         } else {
-            log.warning("Non-INDI skeleton requested; only writing level 0 line: "+record);
+            log().warning("Non-INDI skeleton requested; only writing level 0 line: " + record);
         }
     }
 
     private static void extractHead(final TreeNode<GedcomLine> record) {
         if (record.getObject().getTagString().equals("_ROOT")) {
             // TODO add smart _ROOT processing
-            log.warning("Dropping .HEAD._ROOT line: "+record);
+            log().warning("Dropping .HEAD._ROOT line: " + record);
         } else {
             System.out.println(record);
         }
