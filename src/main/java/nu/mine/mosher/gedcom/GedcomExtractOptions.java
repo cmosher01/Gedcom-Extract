@@ -1,34 +1,54 @@
 package nu.mine.mosher.gedcom;
 
-import joptsimple.OptionParser;
-import joptsimple.OptionSpec;
-
 import java.io.File;
-import java.util.List;
+import java.io.IOException;
 
-public class GedcomExtractOptions extends GedcomOptions {
-    private final OptionSpec<File> files;
+@SuppressWarnings({"access", "WeakerAccess", "unused"})
+public class GedcomExtractOptions {
+    public boolean help;
+    public File gedcom;
+    public File fringe;
 
-    public GedcomExtractOptions(final OptionParser parser) {
-        super(parser);
-        this.files = parser.nonOptions("indis.id.in [skeletons.id.in]").ofType(File.class).describedAs("FILES");
+    public void h() {
+        help();
     }
 
-    private List<File> files() {
-        return this.files.values(get());
+    public void help() {
+        this.help = true;
+        System.err.println("Usage: java -jar gedcom-extract-all.jar <indi.ids -g in.ged [-f skelton.ids] >out.ged");
+        System.err.println("Extract records for given IDs from a GEDCOM file.");
+        System.err.println("Optionally extracts skeleton INDI records.");
+        System.err.println("Options:");
+        System.err.println("-g, --gedcom=FILE    GEDCOM file to extract from.");
+        System.err.println("-f, --fringe=FILE    File of skeleton indi IDs. Optional.");
     }
 
-    public File fileIndis() {
-        if (files().size() <= 0) {
-            throw new IllegalArgumentException("Missing indis.id.in file.");
+    public void g(final String file) throws IOException {
+        gedcom(file);
+    }
+
+    public void gedcom(final String file) throws IOException {
+        this.gedcom = new File(file);
+        if (!this.gedcom.canRead()) {
+            throw new IllegalArgumentException("Cannot read GEDCOM input file: "+this.gedcom.getCanonicalPath());
         }
-        return files().get(0);
     }
 
-    public File fileSkeletons() {
-        if (files().size() <= 1) {
-            return null;
+    public void f(final String file) throws IOException {
+        fringe(file);
+    }
+
+    public void fringe(final String file) throws IOException {
+        this.fringe = new File(file);
+    }
+
+    public GedcomExtractOptions verify() {
+        if (this.help) {
+            return this;
         }
-        return files().get(1);
+        if (this.gedcom == null) {
+            throw new IllegalArgumentException("Missing required GEDCOM input file.");
+        }
+        return this;
     }
 }
