@@ -47,9 +47,7 @@ public class GedcomExtract {
     }
 
     private void readValues() throws IOException {
-        new BufferedReader(new InputStreamReader(new FileInputStream(FileDescriptor.in), StandardCharsets.UTF_8))
-            .lines()
-            .forEach(this.extracts::add);
+        new BufferedReader(new InputStreamReader(new FileInputStream(FileDescriptor.in), StandardCharsets.UTF_8)).lines().forEach(this.extracts::add);
     }
 
     private void readSkels() throws IOException {
