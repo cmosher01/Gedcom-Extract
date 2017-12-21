@@ -12,10 +12,9 @@ mainClassName = 'nu.mine.mosher.gedcom.GedcomExtract'
 sourceCompatibility = 1.8
 
 repositories {
-    mavenLocal()
     mavenCentral()
     maven {
-        url 'http://mosher.mine.nu/maven'
+        url 'http://mosher.mine.nu/nexus/repository/maven-public/'
     }
 }
 
