@@ -92,7 +92,8 @@ public class GedcomExtract {
             for (final TreeNode<GedcomLine> c : record) {
                 final GedcomLine ln = c.getObject();
                 final GedcomTag tag = ln.getTag();
-                if (setIndiChildSkel.contains(tag)) {
+                final String sTag = ln.getTagString();
+                if (setIndiChildSkel.contains(tag) || sTag.equals("_XY")) {
                     System.out.println(c);
                 } else if (tag.equals(GedcomTag.BIRT) || tag.equals(GedcomTag.DEAT)) {
                     // TODO only extract preferred BIRT or DEAT
